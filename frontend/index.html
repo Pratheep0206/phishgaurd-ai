@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PhishGuard AI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="header">
+
+            <div class="logo">🛡️</div>
+
+            <div>
+                <h1>PhishGuard AI</h1>
+
+                <p>
+                    Explainable AI-Powered Phishing Detection
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="input-box">
+
+            <input
+                type="text"
+                id="urlInput"
+                placeholder="Enter website URL..."
+                autocomplete="off"
+            >
+
+            <button onclick="analyzeURL()">
+                🔍 Analyze URL
+            </button>
+
+        </div>
+
+
+        <div class="result" id="result">
+
+            <div class="ready-icon">🛡️</div>
+
+            <h2>Ready to Analyze</h2>
+
+            <p>
+                Enter a URL above to check whether it looks
+                legitimate or suspicious.
+            </p>
+
+        </div>
+
+
+        <div class="footer">
+
+            <span>🤖 Machine Learning</span>
+            <span>🔎 Explainable Detection</span>
+            <span>🛡️ Security Analysis</span>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        async function analyzeURL() {
+
+            const input =
+                document.getElementById("urlInput");
+
+            const result =
+                document.getElementById("result");
+
+            const url =
+                input.value.trim();
+
+
+            if (url === "") {
+
+                alert("Please enter a URL.");
+
+                return;
+            }
+
+
+            result.innerHTML = `
+                <div class="loading">
+
+                    <div class="spinner"></div>
+
+                    <h2>🔍 Analyzing URL...</h2>
+
+                    <p>
+                        PhishGuard AI is checking the URL.
+                    </p>
+
+                </div>
+            `;
+
+
+            try {
+
+                const response = await fetch(
+                    "http://127.0.0.1:8000/analyze",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            url: url
+                        })
+                    }
+                );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Backend returned an error"
+                    );
+
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                let riskClass =
+                    data.risk.toLowerCase();
+
+
+                let icon = "🟢";
+
+                if (data.risk === "MEDIUM") {
+
+                    icon = "🟠";
+
+                }
+
+                if (data.risk === "HIGH") {
+
+                    icon = "🔴";
+
+                }
+
+
+                result.innerHTML = `
+
+                    <div class="result-header">
+
+                        <div>
+
+                            <h2>
+                                🛡️ Analysis Result
+                            </h2>
+
+                            <p class="url">
+                                ${escapeHTML(data.url)}
+                            </p>
+
+                        </div>
+
+                        <div class="risk-badge ${riskClass}">
+                            ${icon} ${data.risk}
+                        </div>
+
+                    </div>
+
+
+                    <div class="score-section">
+
+                        <div class="score-number">
+                            ${data.score}%
+                        </div>
+
+                        <div class="score-label">
+                            Phishing Risk Score
+                        </div>
+
+                        <div class="progress">
+
+                            <div
+                                class="progress-bar ${riskClass}"
+                                style="width: ${data.score}%"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="details">
+
+                        <div class="detail-card">
+
+                            <span>🤖 ML Probability</span>
+
+                            <strong>
+                                ${data.phishing_probability}%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="detail-card">
+
+                            <span>⚙️ Rule Score</span>
+
+                            <strong>
+                                ${data.rule_score}%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="detail-card">
+
+                            <span>🔐 HTTPS</span>
+
+                            <strong>
+                                ${
+                                    data.features.IsHTTPS === 1
+                                    ? "Yes"
+                                    : "No"
+                                }
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="reasons">
+
+                        <h3>🔎 Why?</h3>
+
+                        <ul>
+
+                            ${
+                                data.reasons
+                                    .map(
+                                        reason =>
+                                        `<li>${escapeHTML(reason)}</li>`
+                                    )
+                                    .join("")
+                            }
+
+                        </ul>
+
+                    </div>
+
+                `;
+
+            }
+
+            catch (error) {
+
+                result.innerHTML = `
+
+                    <div class="error">
+
+                        <div class="error-icon">
+                            ❌
+                        </div>
+
+                        <h2>
+                            Connection Error
+                        </h2>
+
+                        <p>
+                            Could not connect to
+                            PhishGuard AI backend.
+                        </p>
+
+                        <small>
+                            Make sure Uvicorn is running
+                            on port 8000.
+                        </small>
+
+                    </div>
+
+                `;
+
+            }
+
+        }
+
+
+        function escapeHTML(value) {
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+
+        }
+
+
+        document
+            .getElementById("urlInput")
+            .addEventListener(
+                "keydown",
+                function(event) {
+
+                    if (event.key === "Enter") {
+
+                        analyzeURL();
+
+                    }
+
+                }
+            );
+
+    </script>
+
+</body>
+
+</html>
