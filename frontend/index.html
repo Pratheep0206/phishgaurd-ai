@@ -12,7 +12,7 @@
 
     <title>PhishGuard AI</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
 
 </head>
 
@@ -121,13 +121,14 @@
             </span>
 
             <span>
-                🛡️ Security Analysis
+                🛡️ Rule-Based Security Layer
             </span>
 
         </div>
 
 
     </div>
+
 
 
 <script>
@@ -181,10 +182,12 @@ function toggleTheme() {
     const newTheme =
         isLight ? "dark" : "light";
 
+
     localStorage.setItem(
         "phishguard-theme",
         newTheme
     );
+
 
     applyTheme(newTheme);
 
@@ -198,9 +201,11 @@ const savedTheme =
         "phishguard-theme"
     );
 
+
 applyTheme(
     savedTheme || "dark"
 );
+
 
 
 // ==================================================
@@ -257,9 +262,24 @@ async function analyzeURL() {
 
     try {
 
+        /*
+         * IMPORTANT
+         *
+         * Do NOT use:
+         *
+         * http://127.0.0.1:8000/analyze
+         *
+         * or
+         *
+         * http://localhost:8000/analyze
+         *
+         *
+         * We use the same deployed server.
+         */
+
         const response =
             await fetch(
-                "http://127.0.0.1:8000/analyze",
+                "/analyze",
                 {
 
                     method: "POST",
@@ -290,12 +310,16 @@ async function analyzeURL() {
             await response.json();
 
 
+
         // ==================================================
         // RISK
         // ==================================================
 
         const risk =
-            String(data.risk || "LOW").toUpperCase();
+            String(
+                data.risk || "LOW"
+            ).toUpperCase();
+
 
         const riskClass =
             risk.toLowerCase();
@@ -318,6 +342,7 @@ async function analyzeURL() {
         }
 
 
+
         // ==================================================
         // SECURITY INDICATORS
         // ==================================================
@@ -338,7 +363,9 @@ async function analyzeURL() {
         }
 
 
+
         let securityHTML = "";
+
 
 
         if (indicators.length > 0) {
@@ -409,6 +436,7 @@ async function analyzeURL() {
 
                     </div>
 
+
                     <div class="security-safe">
 
                         ✓ No significant suspicious
@@ -421,6 +449,7 @@ async function analyzeURL() {
             `;
 
         }
+
 
 
         // ==================================================
@@ -442,7 +471,9 @@ async function analyzeURL() {
             mlMessage =
                 "The ML model detected a high phishing probability based on the URL features.";
 
-        } else if (mlProbability >= 40) {
+        }
+
+        else if (mlProbability >= 40) {
 
             mlMessage =
                 "The ML model detected some suspicious URL characteristics.";
@@ -450,12 +481,9 @@ async function analyzeURL() {
         }
 
 
+
         // ==================================================
         // OVERALL VERDICT
-        //
-        // IMPORTANT:
-        // Use backend overall_verdict.
-        // DO NOT use raw prediction here.
         // ==================================================
 
         const overallVerdict =
@@ -467,6 +495,7 @@ async function analyzeURL() {
                         ? "SUSPICIOUS"
                         : "LIKELY SAFE"
             );
+
 
 
         // ==================================================
@@ -481,17 +510,22 @@ async function analyzeURL() {
             recommendation =
                 "Avoid entering passwords, OTPs, payment details, or other sensitive information on this website.";
 
-        } else if (risk === "MEDIUM") {
+        }
+
+        else if (risk === "MEDIUM") {
 
             recommendation =
                 "Be cautious before entering personal information. Verify the website address and its source.";
 
-        } else {
+        }
+
+        else {
 
             recommendation =
                 "The URL shows a low phishing risk based on the available analysis. Always verify the website before sharing sensitive information.";
 
         }
+
 
 
         // ==================================================
@@ -525,15 +559,19 @@ async function analyzeURL() {
             </div>
 
 
+
             <!-- OVERALL SCORE -->
 
             <div class="score-section">
 
                 <div class="score-number">
 
-                    ${Number(data.score).toFixed(2)}%
+                    ${Number(
+                        data.score || 0
+                    ).toFixed(2)}%
 
                 </div>
+
 
                 <div class="score-label">
 
@@ -547,7 +585,7 @@ async function analyzeURL() {
                     <div
                         class="progress-bar ${riskClass}"
                         style="width: ${Math.min(
-                            Number(data.score),
+                            Number(data.score || 0),
                             100
                         )}%"
                     ></div>
@@ -555,6 +593,7 @@ async function analyzeURL() {
                 </div>
 
             </div>
+
 
 
             <!-- AI ANALYSIS -->
@@ -584,7 +623,7 @@ async function analyzeURL() {
 
                         <strong>
                             ${Number(
-                                data.phishing_probability
+                                data.phishing_probability || 0
                             ).toFixed(2)}%
                         </strong>
 
@@ -600,9 +639,11 @@ async function analyzeURL() {
             </div>
 
 
-            <!-- SECURITY ANALYSIS -->
+
+            <!-- RULE BASED SECURITY ANALYSIS -->
 
             ${securityHTML}
+
 
 
             <!-- DETAILS -->
@@ -649,12 +690,13 @@ async function analyzeURL() {
                     </span>
 
                     <strong class="verdict-${riskClass}">
-                        ${overallVerdict}
+                        ${escapeHTML(overallVerdict)}
                     </strong>
 
                 </div>
 
             </div>
+
 
 
             <!-- RECOMMENDATION -->
@@ -699,8 +741,8 @@ async function analyzeURL() {
                 </p>
 
                 <small>
-                    Make sure Uvicorn is running
-                    on port 8000.
+                    Please try again after
+                    checking the server status.
                 </small>
 
             </div>
@@ -710,6 +752,7 @@ async function analyzeURL() {
     }
 
 }
+
 
 
 // ==================================================
@@ -746,6 +789,7 @@ function escapeHTML(value) {
         );
 
 }
+
 
 
 // ==================================================

@@ -40,7 +40,6 @@ app.add_middleware(
 # ==================================================
 
 BASE_DIR = Path(__file__).resolve().parent
-
 MODEL_PATH = BASE_DIR / "phishing_model.pkl"
 
 
@@ -49,11 +48,9 @@ MODEL_PATH = BASE_DIR / "phishing_model.pkl"
 # ==================================================
 
 try:
-
     model = joblib.load(MODEL_PATH)
 
 except Exception as e:
-
     raise RuntimeError(
         f"Could not load phishing model from {MODEL_PATH}: {e}"
     )
@@ -64,7 +61,6 @@ except Exception as e:
 # ==================================================
 
 class URLRequest(BaseModel):
-
     url: str
 
 
@@ -103,7 +99,6 @@ def analyze_url(request: URLRequest):
 
     url = request.url.strip()
 
-
     # ==================================================
     # BASIC VALIDATION
     # ==================================================
@@ -114,16 +109,12 @@ def analyze_url(request: URLRequest):
             "error": "URL cannot be empty."
         }
 
-
-    # Add scheme if user enters:
-    # google.com instead of https://google.com
-
+    # Add scheme if missing
     analysis_url = url
 
-    if not analysis_url.startswith(
+    if not analysis_url.lower().startswith(
         ("http://", "https://")
     ):
-
         analysis_url = "http://" + analysis_url
 
 
@@ -134,7 +125,6 @@ def analyze_url(request: URLRequest):
     parsed = urlparse(analysis_url)
 
     hostname = parsed.hostname or ""
-
     path = parsed.path or ""
 
     url_lower = analysis_url.lower()
@@ -171,26 +161,18 @@ def analyze_url(request: URLRequest):
         feature_values
     )[0]
 
-
     probabilities = model.predict_proba(
         feature_values
     )[0]
 
-
-    classes = list(
-        model.classes_
-    )
-
+    classes = list(model.classes_)
 
     phishing_index = classes.index(0)
-
     legitimate_index = classes.index(1)
-
 
     phishing_probability = (
         probabilities[phishing_index] * 100
     )
-
 
     legitimate_probability = (
         probabilities[legitimate_index] * 100
@@ -198,7 +180,8 @@ def analyze_url(request: URLRequest):
 
 
     # ==================================================
-    # LAYER 2 — RULE BASED SECURITY ANALYSIS
+    # LAYER 2
+    # RULE-BASED SECURITY ANALYSIS
     # ==================================================
 
     phishing_keywords = [
@@ -238,13 +221,10 @@ def analyze_url(request: URLRequest):
     keyword_matches = [
 
         word
-
         for word in phishing_keywords
-
         if word in url_lower
 
     ]
-
 
     unique_keyword_matches = list(
         dict.fromkeys(
@@ -254,15 +234,13 @@ def analyze_url(request: URLRequest):
 
 
     # ==================================================
-    # KEYWORDS FOUND IN PATH
+    # KEYWORDS IN PATH
     # ==================================================
 
     path_keyword_matches = [
 
         word
-
         for word in phishing_keywords
-
         if word in path.lower()
 
     ]
@@ -275,9 +253,7 @@ def analyze_url(request: URLRequest):
     security_indicators = []
 
 
-    # ==================================================
     # HTTPS
-    # ==================================================
 
     if features["IsHTTPS"] == 0:
 
@@ -286,9 +262,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # IP ADDRESS
-    # ==================================================
 
     if features["IsDomainIP"] == 1:
 
@@ -297,9 +271,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # SUSPICIOUS KEYWORDS
-    # ==================================================
 
     for keyword in unique_keyword_matches:
 
@@ -308,9 +280,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # SUSPICIOUS PATH
-    # ==================================================
 
     if len(path_keyword_matches) >= 1:
 
@@ -319,9 +289,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # MULTIPLE HYPHENS
-    # ==================================================
 
     if hostname.count("-") >= 2:
 
@@ -330,9 +298,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # MULTIPLE SUBDOMAINS
-    # ==================================================
 
     if features["NoOfSubDomain"] >= 2:
 
@@ -341,9 +307,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # OBFUSCATION
-    # ==================================================
 
     if features["HasObfuscation"] == 1:
 
@@ -352,9 +316,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # EXCESSIVE DIGITS
-    # ==================================================
 
     if features["NoOfDegitsInURL"] >= 8:
 
@@ -363,9 +325,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # VERY LONG URL
-    # ==================================================
 
     if features["URLLength"] > 100:
 
@@ -374,9 +334,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # @ SYMBOL
-    # ==================================================
 
     if "@" in analysis_url:
 
@@ -385,9 +343,7 @@ def analyze_url(request: URLRequest):
         )
 
 
-    # ==================================================
     # REMOVE DUPLICATES
-    # ==================================================
 
     security_indicators = list(
         dict.fromkeys(
@@ -403,7 +359,7 @@ def analyze_url(request: URLRequest):
     rule_score = 0
 
 
-    # Multiple suspicious keywords
+    # Suspicious keywords
 
     if len(unique_keyword_matches) >= 3:
 
@@ -418,14 +374,14 @@ def analyze_url(request: URLRequest):
         rule_score += 15
 
 
-    # Suspicious keyword in path
+    # Suspicious path
 
     if len(path_keyword_matches) >= 1:
 
         rule_score += 25
 
 
-    # Hyphenated domain
+    # Hyphens
 
     if hostname.count("-") >= 2:
 
@@ -450,7 +406,7 @@ def analyze_url(request: URLRequest):
         rule_score += 25
 
 
-    # Multiple subdomains
+    # Subdomains
 
     if features["NoOfSubDomain"] >= 3:
 
@@ -461,14 +417,14 @@ def analyze_url(request: URLRequest):
         rule_score += 10
 
 
-    # Excessive digits
+    # Digits
 
     if features["NoOfDegitsInURL"] >= 8:
 
         rule_score += 15
 
 
-    # Very long URL
+    # URL length
 
     if features["URLLength"] > 100:
 
@@ -491,7 +447,11 @@ def analyze_url(request: URLRequest):
 
 
     # ==================================================
-    # FINAL SCORE
+    # FINAL PHISHING SCORE
+    #
+    # Combines:
+    # 1. Machine Learning
+    # 2. Rule-Based Security
     # ==================================================
 
     final_score = max(
@@ -506,15 +466,9 @@ def analyze_url(request: URLRequest):
 
     if (
         len(unique_keyword_matches) >= 2
-
         and (
-
             hostname.count("-") >= 1
-
-            or
-
-            len(path_keyword_matches) >= 1
-
+            or len(path_keyword_matches) >= 1
         )
     ):
 
@@ -530,10 +484,7 @@ def analyze_url(request: URLRequest):
 
     if (
         features["IsDomainIP"] == 1
-
-        and
-
-        len(unique_keyword_matches) >= 1
+        and len(unique_keyword_matches) >= 1
     ):
 
         final_score = max(
@@ -641,7 +592,7 @@ def analyze_url(request: URLRequest):
     if features["HasObfuscation"] == 1:
 
         reasons.append(
-            "URL contains encoded characters"
+            "URL contains encoded or obfuscated characters"
         )
 
 
@@ -670,21 +621,10 @@ def analyze_url(request: URLRequest):
     # ML EXPLANATION
     # ==================================================
 
-    if (
-        phishing_probability >= 70
-
-        and
-
-        not any(
-            "suspicious"
-            in reason.lower()
-
-            for reason in reasons
-        )
-    ):
+    if phishing_probability >= 70:
 
         reasons.append(
-            "ML model detected suspicious URL characteristics"
+            "Machine learning model detected a high phishing probability"
         )
 
 
@@ -795,10 +735,7 @@ def analyze_url(request: URLRequest):
 
         "recommendation": recommendation,
 
-
-        # ==================================================
-        # ML RESULTS
-        # ==================================================
+        # ML
 
         "phishing_probability": round(
             phishing_probability,
@@ -810,10 +747,7 @@ def analyze_url(request: URLRequest):
             2
         ),
 
-
-        # ==================================================
-        # RULE BASED SECURITY RESULTS
-        # ==================================================
+        # Rule-based
 
         "rule_score": round(
             rule_score,
@@ -837,17 +771,11 @@ def analyze_url(request: URLRequest):
 
         },
 
-
-        # ==================================================
-        # URL FEATURES
-        # ==================================================
+        # Features
 
         "features": features,
 
-
-        # ==================================================
-        # EXPLANATION
-        # ==================================================
+        # Explanation
 
         "reasons": reasons
 
