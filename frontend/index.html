@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -12,8 +11,7 @@
 
     <title>PhishGuard AI</title>
 
-    <link rel="stylesheet" href="/static/style.css">
-
+    <link rel="stylesheet" href="style.css">
 </head>
 
 
@@ -21,21 +19,18 @@
 
     <div class="container">
 
-
         <!-- THEME TOGGLE -->
 
         <button
+            type="button"
             class="theme-toggle"
             id="themeToggle"
-            onclick="toggleTheme()"
         >
 
             <span
                 class="theme-icon"
                 id="themeIcon"
-            >
-                ☀️
-            </span>
+            >☀️</span>
 
             <span id="themeText">
                 Light
@@ -78,7 +73,10 @@
                 autocomplete="off"
             >
 
-            <button onclick="analyzeURL()">
+            <button
+                type="button"
+                id="analyzeButton"
+            >
                 🔍 Analyze URL
             </button>
 
@@ -126,17 +124,34 @@
 
         </div>
 
-
     </div>
-
 
 
 <script>
 
+/* ==================================================
+   PHISHGUARD AI
+   DEPLOYED BACKEND
+================================================== */
 
-// ==================================================
-// THEME SYSTEM
-// ==================================================
+/*
+    Frontend:
+    https://phishgaurd-ai-frontend.onrender.com
+
+    Backend:
+    https://phishgaurd-ai-y55l.onrender.com
+*/
+
+const BACKEND_URL =
+    "https://phishgaurd-ai-y55l.onrender.com";
+
+
+/* ==================================================
+   ELEMENTS
+================================================== */
+
+const themeToggle =
+    document.getElementById("themeToggle");
 
 const themeIcon =
     document.getElementById("themeIcon");
@@ -144,6 +159,19 @@ const themeIcon =
 const themeText =
     document.getElementById("themeText");
 
+const urlInput =
+    document.getElementById("urlInput");
+
+const analyzeButton =
+    document.getElementById("analyzeButton");
+
+const result =
+    document.getElementById("result");
+
+
+/* ==================================================
+   THEME SYSTEM
+================================================== */
 
 function applyTheme(theme) {
 
@@ -166,7 +194,6 @@ function applyTheme(theme) {
         themeIcon.textContent = "☀️";
 
         themeText.textContent = "Light";
-
     }
 
 }
@@ -182,64 +209,58 @@ function toggleTheme() {
     const newTheme =
         isLight ? "dark" : "light";
 
-
     localStorage.setItem(
         "phishguard-theme",
         newTheme
     );
 
-
     applyTheme(newTheme);
-
 }
 
 
-// Load saved theme
+themeToggle.addEventListener(
+    "click",
+    toggleTheme
+);
+
+
+/* LOAD SAVED THEME */
 
 const savedTheme =
     localStorage.getItem(
         "phishguard-theme"
     );
 
-
 applyTheme(
     savedTheme || "dark"
 );
 
 
-
-// ==================================================
-// ANALYZE URL
-// ==================================================
+/* ==================================================
+   ANALYZE URL
+================================================== */
 
 async function analyzeURL() {
 
-    const input =
-        document.getElementById(
-            "urlInput"
-        );
-
-    const result =
-        document.getElementById(
-            "result"
-        );
-
     const url =
-        input.value.trim();
+        urlInput.value.trim();
 
 
-    if (url === "") {
+    /* EMPTY URL */
+
+    if (!url) {
 
         alert(
             "Please enter a URL."
         );
 
-        return;
+        urlInput.focus();
 
+        return;
     }
 
 
-    // Loading
+    /* LOADING */
 
     result.innerHTML = `
 
@@ -260,28 +281,24 @@ async function analyzeURL() {
     `;
 
 
+    /* DISABLE BUTTON */
+
+    analyzeButton.disabled = true;
+
+    analyzeButton.textContent =
+        "🔍 Analyzing...";
+
+
     try {
 
-        /*
-         * IMPORTANT
-         *
-         * Do NOT use:
-         *
-         * http://127.0.0.1:8000/analyze
-         *
-         * or
-         *
-         * http://localhost:8000/analyze
-         *
-         *
-         * We use the same deployed server.
-         */
+        /* ==================================================
+           SEND REQUEST TO DEPLOYED FASTAPI BACKEND
+        ================================================== */
 
         const response =
             await fetch(
-                "/analyze",
+                `${BACKEND_URL}/analyze`,
                 {
-
                     method: "POST",
 
                     headers: {
@@ -292,28 +309,39 @@ async function analyzeURL() {
                     body: JSON.stringify({
                         url: url
                     })
-
                 }
             );
 
 
+        /* HTTP ERROR */
+
         if (!response.ok) {
 
             throw new Error(
-                "Backend returned an error"
+                `Backend returned HTTP ${response.status}`
             );
-
         }
 
+
+        /* JSON RESPONSE */
 
         const data =
             await response.json();
 
 
+        /* BACKEND ERROR */
 
-        // ==================================================
-        // RISK
-        // ==================================================
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+        }
+
+
+        /* ==================================================
+           RISK
+        ================================================== */
 
         const risk =
             String(
@@ -329,23 +357,18 @@ async function analyzeURL() {
 
 
         if (risk === "MEDIUM") {
-
             icon = "🟠";
-
         }
 
 
         if (risk === "HIGH") {
-
             icon = "🔴";
-
         }
 
 
-
-        // ==================================================
-        // SECURITY INDICATORS
-        // ==================================================
+        /* ==================================================
+           SECURITY INDICATORS
+        ================================================== */
 
         let indicators = [];
 
@@ -359,13 +382,14 @@ async function analyzeURL() {
 
             indicators =
                 data.security_analysis.indicators;
-
         }
 
 
+        /* ==================================================
+           SECURITY HTML
+        ================================================== */
 
         let securityHTML = "";
-
 
 
         if (indicators.length > 0) {
@@ -381,9 +405,17 @@ async function analyzeURL() {
                         </h3>
 
                         <span>
+
                             ${indicators.length}
-                            indicator${indicators.length === 1 ? "" : "s"}
+
+                            indicator${
+                                indicators.length === 1
+                                    ? ""
+                                    : "s"
+                            }
+
                             detected
+
                         </span>
 
                     </div>
@@ -402,7 +434,9 @@ async function analyzeURL() {
                                         </span>
 
                                         <p>
-                                            ${escapeHTML(indicator)}
+                                            ${escapeHTML(
+                                                indicator
+                                            )}
                                         </p>
 
                                     </div>
@@ -447,14 +481,12 @@ async function analyzeURL() {
                 </div>
 
             `;
-
         }
 
 
-
-        // ==================================================
-        // ML EXPLANATION
-        // ==================================================
+        /* ==================================================
+           ML PROBABILITY
+        ================================================== */
 
         const mlProbability =
             Number(
@@ -471,20 +503,32 @@ async function analyzeURL() {
             mlMessage =
                 "The ML model detected a high phishing probability based on the URL features.";
 
-        }
-
-        else if (mlProbability >= 40) {
+        } else if (mlProbability >= 40) {
 
             mlMessage =
                 "The ML model detected some suspicious URL characteristics.";
-
         }
 
 
+        /* ==================================================
+           SCORE
+        ================================================== */
 
-        // ==================================================
-        // OVERALL VERDICT
-        // ==================================================
+        const score =
+            Math.min(
+                Math.max(
+                    Number(
+                        data.score || 0
+                    ),
+                    0
+                ),
+                100
+            );
+
+
+        /* ==================================================
+           OVERALL VERDICT
+        ================================================== */
 
         const overallVerdict =
             data.overall_verdict ||
@@ -497,10 +541,9 @@ async function analyzeURL() {
             );
 
 
-
-        // ==================================================
-        // RECOMMENDATION
-        // ==================================================
+        /* ==================================================
+           RECOMMENDATION
+        ================================================== */
 
         let recommendation;
 
@@ -510,27 +553,32 @@ async function analyzeURL() {
             recommendation =
                 "Avoid entering passwords, OTPs, payment details, or other sensitive information on this website.";
 
-        }
-
-        else if (risk === "MEDIUM") {
+        } else if (risk === "MEDIUM") {
 
             recommendation =
                 "Be cautious before entering personal information. Verify the website address and its source.";
 
-        }
-
-        else {
+        } else {
 
             recommendation =
                 "The URL shows a low phishing risk based on the available analysis. Always verify the website before sharing sensitive information.";
-
         }
 
 
+        /* ==================================================
+           HTTPS
+        ================================================== */
 
-        // ==================================================
-        // FINAL RESULT
-        // ==================================================
+        const isHTTPS =
+            data.features &&
+            Number(
+                data.features.IsHTTPS
+            ) === 1;
+
+
+        /* ==================================================
+           FINAL RESULT
+        ================================================== */
 
         result.innerHTML = `
 
@@ -543,7 +591,11 @@ async function analyzeURL() {
                     </h2>
 
                     <p class="url">
-                        ${escapeHTML(data.url)}
+
+                        ${escapeHTML(
+                            data.url || url
+                        )}
+
                     </p>
 
                 </div>
@@ -552,12 +604,12 @@ async function analyzeURL() {
                 <div class="risk-badge ${riskClass}">
 
                     ${icon}
-                    ${risk}
+
+                    ${escapeHTML(risk)}
 
                 </div>
 
             </div>
-
 
 
             <!-- OVERALL SCORE -->
@@ -566,9 +618,7 @@ async function analyzeURL() {
 
                 <div class="score-number">
 
-                    ${Number(
-                        data.score || 0
-                    ).toFixed(2)}%
+                    ${score.toFixed(2)}%
 
                 </div>
 
@@ -584,16 +634,12 @@ async function analyzeURL() {
 
                     <div
                         class="progress-bar ${riskClass}"
-                        style="width: ${Math.min(
-                            Number(data.score || 0),
-                            100
-                        )}%"
+                        style="width: ${score}%"
                     ></div>
 
                 </div>
 
             </div>
-
 
 
             <!-- AI ANALYSIS -->
@@ -622,16 +668,18 @@ async function analyzeURL() {
                         </span>
 
                         <strong>
-                            ${Number(
-                                data.phishing_probability || 0
-                            ).toFixed(2)}%
+                            ${mlProbability.toFixed(2)}%
                         </strong>
 
                     </div>
 
 
                     <p>
-                        ${mlMessage}
+
+                        ${escapeHTML(
+                            mlMessage
+                        )}
+
                     </p>
 
                 </div>
@@ -639,11 +687,9 @@ async function analyzeURL() {
             </div>
 
 
-
-            <!-- RULE BASED SECURITY ANALYSIS -->
+            <!-- SECURITY ANALYSIS -->
 
             ${securityHTML}
-
 
 
             <!-- DETAILS -->
@@ -659,8 +705,7 @@ async function analyzeURL() {
                     <strong>
 
                         ${
-                            data.features &&
-                            data.features.IsHTTPS === 1
+                            isHTTPS
                                 ? "Yes"
                                 : "No"
                         }
@@ -690,13 +735,16 @@ async function analyzeURL() {
                     </span>
 
                     <strong class="verdict-${riskClass}">
-                        ${escapeHTML(overallVerdict)}
+
+                        ${escapeHTML(
+                            overallVerdict
+                        )}
+
                     </strong>
 
                 </div>
 
             </div>
-
 
 
             <!-- RECOMMENDATION -->
@@ -708,7 +756,11 @@ async function analyzeURL() {
                 </h3>
 
                 <p>
-                    ${recommendation}
+
+                    ${escapeHTML(
+                        recommendation
+                    )}
+
                 </p>
 
             </div>
@@ -718,9 +770,16 @@ async function analyzeURL() {
     }
 
 
+    /* ==================================================
+       ERROR
+    ================================================== */
+
     catch (error) {
 
-        console.error(error);
+        console.error(
+            "PhishGuard Error:",
+            error
+        );
 
 
         result.innerHTML = `
@@ -731,18 +790,36 @@ async function analyzeURL() {
                     ❌
                 </div>
 
+
                 <h2>
                     Connection Error
                 </h2>
+
 
                 <p>
                     Could not connect to
                     PhishGuard AI backend.
                 </p>
 
+
                 <small>
-                    Please try again after
-                    checking the server status.
+
+                    Please make sure the backend
+                    is running and try again.
+
+                </small>
+
+
+                <br><br>
+
+
+                <small>
+
+                    Error:
+                    ${escapeHTML(
+                        error.message
+                    )}
+
                 </small>
 
             </div>
@@ -751,13 +828,52 @@ async function analyzeURL() {
 
     }
 
+
+    finally {
+
+        /* ENABLE BUTTON */
+
+        analyzeButton.disabled = false;
+
+        analyzeButton.textContent =
+            "🔍 Analyze URL";
+
+    }
+
 }
 
 
+/* ==================================================
+   ANALYZE BUTTON
+================================================== */
 
-// ==================================================
-// ESCAPE HTML
-// ==================================================
+analyzeButton.addEventListener(
+    "click",
+    analyzeURL
+);
+
+
+/* ==================================================
+   ENTER KEY
+================================================== */
+
+urlInput.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            analyzeURL();
+
+        }
+
+    }
+);
+
+
+/* ==================================================
+   ESCAPE HTML
+================================================== */
 
 function escapeHTML(value) {
 
@@ -789,27 +905,6 @@ function escapeHTML(value) {
         );
 
 }
-
-
-
-// ==================================================
-// ENTER KEY
-// ==================================================
-
-document
-    .getElementById("urlInput")
-    .addEventListener(
-        "keydown",
-        function(event) {
-
-            if (event.key === "Enter") {
-
-                analyzeURL();
-
-            }
-
-        }
-    );
 
 </script>
 
