@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>PhishGuard AI</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <!-- THEME TOGGLE -->
+
+        <button
+            type="button"
+            class="theme-toggle"
+            id="themeToggle"
+        >
+
+            <span
+                class="theme-icon"
+                id="themeIcon"
+            >☀️</span>
+
+            <span id="themeText">
+                Light
+            </span>
+
+        </button>
+
+
+        <!-- HEADER -->
+
+        <div class="header">
+
+            <div class="logo">
+                🛡️
+            </div>
+
+            <div>
+
+                <h1>
+                    PhishGuard AI
+                </h1>
+
+                <p>
+                    Explainable AI-Powered Phishing Detection
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- URL INPUT -->
+
+        <div class="input-box">
+
+            <input
+                type="text"
+                id="urlInput"
+                placeholder="Enter website URL..."
+                autocomplete="off"
+            >
+
+            <button
+                type="button"
+                id="analyzeButton"
+            >
+                🔍 Analyze URL
+            </button>
+
+        </div>
+
+
+        <!-- RESULT -->
+
+        <div
+            class="result"
+            id="result"
+        >
+
+            <div class="ready-icon">
+                🛡️
+            </div>
+
+            <h2>
+                Ready to Analyze
+            </h2>
+
+            <p>
+                Enter a URL above to check whether it looks
+                legitimate or suspicious.
+            </p>
+
+        </div>
+
+
+        <!-- FOOTER -->
+
+        <div class="footer">
+
+            <span>
+                🤖 Machine Learning
+            </span>
+
+            <span>
+                🔎 Explainable Detection
+            </span>
+
+            <span>
+                🛡️ Rule-Based Security Layer
+            </span>
+
+        </div>
+
+    </div>
+
+
+<script>
+
+/* ==================================================
+   PHISHGUARD AI
+   DEPLOYED BACKEND
+================================================== */
+
+/*
+    Frontend:
+    https://phishgaurd-ai-frontend.onrender.com
+
+    Backend:
+    https://phishgaurd-ai-y55l.onrender.com
+*/
+
+const BACKEND_URL =
+    "https://phishgaurd-ai-y55l.onrender.com";
+
+
+/* ==================================================
+   ELEMENTS
+================================================== */
+
+const themeToggle =
+    document.getElementById("themeToggle");
+
+const themeIcon =
+    document.getElementById("themeIcon");
+
+const themeText =
+    document.getElementById("themeText");
+
+const urlInput =
+    document.getElementById("urlInput");
+
+const analyzeButton =
+    document.getElementById("analyzeButton");
+
+const result =
+    document.getElementById("result");
+
+
+/* ==================================================
+   THEME SYSTEM
+================================================== */
+
+function applyTheme(theme) {
+
+    if (theme === "light") {
+
+        document.body.classList.add(
+            "light-theme"
+        );
+
+        themeIcon.textContent = "🌙";
+
+        themeText.textContent = "Dark";
+
+    } else {
+
+        document.body.classList.remove(
+            "light-theme"
+        );
+
+        themeIcon.textContent = "☀️";
+
+        themeText.textContent = "Light";
+    }
+
+}
+
+
+function toggleTheme() {
+
+    const isLight =
+        document.body.classList.contains(
+            "light-theme"
+        );
+
+    const newTheme =
+        isLight ? "dark" : "light";
+
+    localStorage.setItem(
+        "phishguard-theme",
+        newTheme
+    );
+
+    applyTheme(newTheme);
+}
+
+
+themeToggle.addEventListener(
+    "click",
+    toggleTheme
+);
+
+
+/* LOAD SAVED THEME */
+
+const savedTheme =
+    localStorage.getItem(
+        "phishguard-theme"
+    );
+
+applyTheme(
+    savedTheme || "dark"
+);
+
+
+/* ==================================================
+   ANALYZE URL
+================================================== */
+
+async function analyzeURL() {
+
+    const url =
+        urlInput.value.trim();
+
+
+    /* EMPTY URL */
+
+    if (!url) {
+
+        alert(
+            "Please enter a URL."
+        );
+
+        urlInput.focus();
+
+        return;
+    }
+
+
+    /* LOADING */
+
+    result.innerHTML = `
+
+        <div class="loading">
+
+            <div class="spinner"></div>
+
+            <h2>
+                🔍 Analyzing URL...
+            </h2>
+
+            <p>
+                PhishGuard AI is checking the URL.
+            </p>
+
+        </div>
+
+    `;
+
+
+    /* DISABLE BUTTON */
+
+    analyzeButton.disabled = true;
+
+    analyzeButton.textContent =
+        "🔍 Analyzing...";
+
+
+    try {
+
+        /* ==================================================
+           SEND REQUEST TO DEPLOYED FASTAPI BACKEND
+        ================================================== */
+
+        const response =
+            await fetch(
+                `${BACKEND_URL}/analyze`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        url: url
+                    })
+                }
+            );
+
+
+        /* HTTP ERROR */
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Backend returned HTTP ${response.status}`
+            );
+        }
+
+
+        /* JSON RESPONSE */
+
+        const data =
+            await response.json();
+
+
+        /* BACKEND ERROR */
+
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+        }
+
+
+        /* ==================================================
+           RISK
+        ================================================== */
+
+        const risk =
+            String(
+                data.risk || "LOW"
+            ).toUpperCase();
+
+
+        const riskClass =
+            risk.toLowerCase();
+
+
+        let icon = "🟢";
+
+
+        if (risk === "MEDIUM") {
+            icon = "🟠";
+        }
+
+
+        if (risk === "HIGH") {
+            icon = "🔴";
+        }
+
+
+        /* ==================================================
+           SECURITY INDICATORS
+        ================================================== */
+
+        let indicators = [];
+
+
+        if (
+            data.security_analysis &&
+            Array.isArray(
+                data.security_analysis.indicators
+            )
+        ) {
+
+            indicators =
+                data.security_analysis.indicators;
+        }
+
+
+        /* ==================================================
+           SECURITY HTML
+        ================================================== */
+
+        let securityHTML = "";
+
+
+        if (indicators.length > 0) {
+
+            securityHTML = `
+
+                <div class="security-analysis">
+
+                    <div class="section-title">
+
+                        <h3>
+                            🛡️ Security Analysis
+                        </h3>
+
+                        <span>
+
+                            ${indicators.length}
+
+                            indicator${
+                                indicators.length === 1
+                                    ? ""
+                                    : "s"
+                            }
+
+                            detected
+
+                        </span>
+
+                    </div>
+
+
+                    <div class="security-list">
+
+                        ${indicators
+                            .map(
+                                indicator => `
+
+                                    <div class="security-item">
+
+                                        <span>
+                                            ⚠️
+                                        </span>
+
+                                        <p>
+                                            ${escapeHTML(
+                                                indicator
+                                            )}
+                                        </p>
+
+                                    </div>
+
+                                `
+                            )
+                            .join("")
+                        }
+
+                    </div>
+
+                </div>
+
+            `;
+
+        } else {
+
+            securityHTML = `
+
+                <div class="security-analysis safe">
+
+                    <div class="section-title">
+
+                        <h3>
+                            🛡️ Security Analysis
+                        </h3>
+
+                        <span>
+                            No suspicious indicators
+                        </span>
+
+                    </div>
+
+
+                    <div class="security-safe">
+
+                        ✓ No significant suspicious
+                        URL patterns detected.
+
+                    </div>
+
+                </div>
+
+            `;
+        }
+
+
+        /* ==================================================
+           ML PROBABILITY
+        ================================================== */
+
+        const mlProbability =
+            Number(
+                data.phishing_probability || 0
+            );
+
+
+        let mlMessage =
+            "The ML model found a low phishing probability based on the URL features.";
+
+
+        if (mlProbability >= 70) {
+
+            mlMessage =
+                "The ML model detected a high phishing probability based on the URL features.";
+
+        } else if (mlProbability >= 40) {
+
+            mlMessage =
+                "The ML model detected some suspicious URL characteristics.";
+        }
+
+
+        /* ==================================================
+           SCORE
+        ================================================== */
+
+        const score =
+            Math.min(
+                Math.max(
+                    Number(
+                        data.score || 0
+                    ),
+                    0
+                ),
+                100
+            );
+
+
+        /* ==================================================
+           OVERALL VERDICT
+        ================================================== */
+
+        const overallVerdict =
+            data.overall_verdict ||
+            (
+                risk === "HIGH"
+                    ? "PHISHING"
+                    : risk === "MEDIUM"
+                        ? "SUSPICIOUS"
+                        : "LIKELY SAFE"
+            );
+
+
+        /* ==================================================
+           RECOMMENDATION
+        ================================================== */
+
+        let recommendation;
+
+
+        if (risk === "HIGH") {
+
+            recommendation =
+                "Avoid entering passwords, OTPs, payment details, or other sensitive information on this website.";
+
+        } else if (risk === "MEDIUM") {
+
+            recommendation =
+                "Be cautious before entering personal information. Verify the website address and its source.";
+
+        } else {
+
+            recommendation =
+                "The URL shows a low phishing risk based on the available analysis. Always verify the website before sharing sensitive information.";
+        }
+
+
+        /* ==================================================
+           HTTPS
+        ================================================== */
+
+        const isHTTPS =
+            data.features &&
+            Number(
+                data.features.IsHTTPS
+            ) === 1;
+
+
+        /* ==================================================
+           FINAL RESULT
+        ================================================== */
+
+        result.innerHTML = `
+
+            <div class="result-header">
+
+                <div>
+
+                    <h2>
+                        🛡️ Analysis Result
+                    </h2>
+
+                    <p class="url">
+
+                        ${escapeHTML(
+                            data.url || url
+                        )}
+
+                    </p>
+
+                </div>
+
+
+                <div class="risk-badge ${riskClass}">
+
+                    ${icon}
+
+                    ${escapeHTML(risk)}
+
+                </div>
+
+            </div>
+
+
+            <!-- OVERALL SCORE -->
+
+            <div class="score-section">
+
+                <div class="score-number">
+
+                    ${score.toFixed(2)}%
+
+                </div>
+
+
+                <div class="score-label">
+
+                    Overall Phishing Risk
+
+                </div>
+
+
+                <div class="progress">
+
+                    <div
+                        class="progress-bar ${riskClass}"
+                        style="width: ${score}%"
+                    ></div>
+
+                </div>
+
+            </div>
+
+
+            <!-- AI ANALYSIS -->
+
+            <div class="ai-analysis">
+
+                <div class="section-title">
+
+                    <h3>
+                        🤖 AI Analysis
+                    </h3>
+
+                    <span>
+                        Machine Learning
+                    </span>
+
+                </div>
+
+
+                <div class="ai-card">
+
+                    <div>
+
+                        <span>
+                            Phishing Probability
+                        </span>
+
+                        <strong>
+                            ${mlProbability.toFixed(2)}%
+                        </strong>
+
+                    </div>
+
+
+                    <p>
+
+                        ${escapeHTML(
+                            mlMessage
+                        )}
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- SECURITY ANALYSIS -->
+
+            ${securityHTML}
+
+
+            <!-- DETAILS -->
+
+            <div class="details">
+
+                <div class="detail-card">
+
+                    <span>
+                        🔐 HTTPS
+                    </span>
+
+                    <strong>
+
+                        ${
+                            isHTTPS
+                                ? "Yes"
+                                : "No"
+                        }
+
+                    </strong>
+
+                </div>
+
+
+                <div class="detail-card">
+
+                    <span>
+                        🔎 Indicators
+                    </span>
+
+                    <strong>
+                        ${indicators.length}
+                    </strong>
+
+                </div>
+
+
+                <div class="detail-card">
+
+                    <span>
+                        🎯 Overall Verdict
+                    </span>
+
+                    <strong class="verdict-${riskClass}">
+
+                        ${escapeHTML(
+                            overallVerdict
+                        )}
+
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <!-- RECOMMENDATION -->
+
+            <div class="recommendation">
+
+                <h3>
+                    💡 Recommendation
+                </h3>
+
+                <p>
+
+                    ${escapeHTML(
+                        recommendation
+                    )}
+
+                </p>
+
+            </div>
+
+        `;
+
+    }
+
+
+    /* ==================================================
+       ERROR
+    ================================================== */
+
+    catch (error) {
+
+        console.error(
+            "PhishGuard Error:",
+            error
+        );
+
+
+        result.innerHTML = `
+
+            <div class="error">
+
+                <div class="error-icon">
+                    ❌
+                </div>
+
+
+                <h2>
+                    Connection Error
+                </h2>
+
+
+                <p>
+                    Could not connect to
+                    PhishGuard AI backend.
+                </p>
+
+
+                <small>
+
+                    Please make sure the backend
+                    is running and try again.
+
+                </small>
+
+
+                <br><br>
+
+
+                <small>
+
+                    Error:
+                    ${escapeHTML(
+                        error.message
+                    )}
+
+                </small>
+
+            </div>
+
+        `;
+
+    }
+
+
+    finally {
+
+        /* ENABLE BUTTON */
+
+        analyzeButton.disabled = false;
+
+        analyzeButton.textContent =
+            "🔍 Analyze URL";
+
+    }
+
+}
+
+
+/* ==================================================
+   ANALYZE BUTTON
+================================================== */
+
+analyzeButton.addEventListener(
+    "click",
+    analyzeURL
+);
+
+
+/* ==================================================
+   ENTER KEY
+================================================== */
+
+urlInput.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            analyzeURL();
+
+        }
+
+    }
+);
+
+
+/* ==================================================
+   ESCAPE HTML
+================================================== */
+
+function escapeHTML(value) {
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+</script>
+
+
+</body>
+
+</html>
